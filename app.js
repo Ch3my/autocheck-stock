@@ -17,12 +17,41 @@ async function executeQueryAndSendSlackMessage(connection, letter) {
   const query = `CALL CalculateDifference("${letter}");`;
   console.log(`${new Date().toLocaleString()} Checking ${letter}`)
 
+  // Se trae todos los componentes de items compuestos para verificar si el padre tiene unidades pendientes
+  const tabicomp = await queryDatabase(connection, "SELECT * FROM TABICOMP");
+
   try {
     // Trae un array de 2, el primer elemento es como rows
-    const results = await queryDatabase(connection, query);
+    const results = await callDatabase(connection, query);
     if (results.length > 0) {
-      const message = `ANTUMALAL: Errores en el inventario en Sucursal ${letter} consulta retornó ${results.length} fila(s).`;
-      await sendSlackMessage(message);
+      for (let [index, r] of [...results.entries()].reverse()) {
+        if (tabicomp.some(o => o.CODITE == r.CODIGO)) {
+          // El item con inventario malo es un componente, posiblemente su padre fue vendido?
+          let thisComponente = tabicomp.find(o => o.CODITE == r.CODIGO)
+
+          let undPendientesPadre = await queryDatabase(connection,
+            `select * from MOVDET
+            where MOVDET.SALDO > 0
+            AND MOVDET.FEC_SIS >= "2023-01-01"
+            AND MOVDET.MOVMTO IN ("55", "25")
+            AND MOVDET.ESTADO = 'P'
+            AND MOVDET.SALIDA = "${letter}"
+            and MOVDET.CODITE = "${thisComponente.CODIGO}"`
+          )
+          let totalUndPendientesHijoCalculadas = 0
+          for (let undPadre of undPendientesPadre) {
+            totalUndPendientesHijoCalculadas += undPadre.UNIDADES * thisComponente.UNIDADES
+          }
+          if ((totalUndPendientesHijoCalculadas + r.saldo_nvs + r.DOCUM) == r.FISICO) {
+            // El stock esta bien, hay que eliminar la fila
+            results.splice(index, 1);
+          }
+        }
+      }
+      if (results.length > 0) {
+        const message = `ANTUMALAL: Errores en el inventario en Sucursal ${letter} consulta retornó ${results.length} fila(s).`;
+        await sendSlackMessage(message);
+      }
     }
   } catch (error) {
     console.error(`Error for letter ${letter}: ${error.message}`);
@@ -30,9 +59,21 @@ async function executeQueryAndSendSlackMessage(connection, letter) {
 }
 
 // Function to query the database using async/await
-function queryDatabase(connection, query) {
+function callDatabase(connection, query) {
   return new Promise((resolve, reject) => {
     connection.query(query, (error, [results, info], fields) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(results);
+      }
+    });
+  });
+}
+// Function to query the database using async/await
+function queryDatabase(connection, query) {
+  return new Promise((resolve, reject) => {
+    connection.query(query, (error, results, fields) => {
       if (error) {
         reject(error);
       } else {
