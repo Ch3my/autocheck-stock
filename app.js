@@ -17,7 +17,7 @@ async function executeQueryAndSendSlackMessage(letter) {
     }
     let message = `ANTUMALAL: Errores en el inventario en Sucursal ${letter} consulta retornó ${response.data.length} fila(s) \n`;
     for (let d of response.data) {
-      message += `${d.codName}`
+      message += `${d.codName} \n`
     }
     await sendSlackMessage(message);
   } catch (error) {

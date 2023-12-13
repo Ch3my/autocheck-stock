@@ -6,12 +6,13 @@ services:
     volumes:
       - .:/home/node/app
     environment:
-      - DB_HOST=192.168.10.201
-      - DB_USER=acceso
-      - DB_PASS=acceso
-      - DB_NAME=SGEANTUMALAL
-      - SLACK_TOKEN=xoxb-923762630385-3860476070180-5vRFjgbIyuOXnNbZFYpu4DOy
-      - SLACK_CHANNEL=soporte
-      - CORE_PREFIX=https://core.antumalal.net:4600
+      DB_HOST: 192.168.10.201
+      DB_USER: acceso
+      DB_PASS: acceso
+      DB_NAME: SGEANTUMALAL
+      SLACK_TOKEN: xoxb-923762630385-3860476070180-5vRFjgbIyuOXnNbZFYpu4DOy
+      SLACK_CHANNEL: soporte
+      CORE_PREFIX: https://core.antumalal.net:4600
+      TZ: America/Santiago
     command: ["node", "app.js"] 
  
