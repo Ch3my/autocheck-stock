@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Stock</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.4.4/luxon.min.js" integrity="sha512-dUlSLLkxslGILhPdCkALwk4szPhp3xmZIKFtlUD+O9Lslq41Aksmdt5OGqpomDoT4FsCUH70jQU8ezZHI3v1RQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        .top-htas {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+        }
+    </style>
+</head>
+
+<body class="container pt-3">
+
+    <div class="top-htas gap-3 mb-3">
+        <button type="button" class="btn btn-primary fetch-data">Fetch Data</button>
+        <div class="d-flex align-items-center gap-2">
+            <label>Bodega</label>
+            <select class="form-control">
+                <option value="A">A - Casa Matriz</option>
+                <option value="B">B - TodoNeumatico</option>
+                <option value="C">C - Concepcion</option>
+                <option value="D">D - Curico</option>
+                <option value="E">E - Cd Chillan</option>
+                <option value="F">F - TodoFiltro</option>
+                <option value="G">G - Temuco</option>
+                <option value="H">H - Pto Montt</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="target-div"></div>
+</body>
+
+
+<script>
+    document.querySelector(".fetch-data").addEventListener("click", async () => {
+        document.querySelector(".fetch-data").innerHTML = `
+           <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>`
+
+        let targetBodega = document.querySelector("select").value
+        let data = await fetch(`https://core.antumalal.net:4600/api/v1/informes/check-stock-dvf?sessionId=WzI3LDM0LDIxLDEyLDk0XQ==&bodega=${targetBodega}`)
+            .then(response => response.json())
+
+        let outputHtml = ""
+        for (let d of data.data) {
+            outputHtml += `<h2>Item: ${d.codName}</h2>`
+            outputHtml += `<span>Fisico: ${d.fisico} - Documentado: ${d.docum}</span><br/>`
+            outputHtml += `<span>Saldo Pendiente: ${d.saldoPendiente}</span><br/>`
+            outputHtml += `<span class="text-danger">Diff Documentado: ${d.diffDocumentado}</span><br/>`
+
+            outputHtml += `<h3 class="mt-3">Detalles Pendientes</h3>`
+            outputHtml += `<table class="table table-hover table-sm">
+                <thead>
+                    <th>Doc</th>
+                    <th class="text-end">Numero</th>
+                    <th>Fec Inv</th>
+                    <th>Cod</th>
+                    <th class="text-end">Und</th>
+                    <th class="text-end">Saldo</th>
+                </thead>
+                <tbody>`
+
+            for (let doc of d.movsPendientes) {
+                outputHtml += `<tr>
+                    <td>${doc.document}</td>
+                    <td class="text-end">${doc.numero}</td>
+                    <td>${luxon.DateTime.fromISO(doc.fecSis, { zone: 'utc' }).toFormat('yyyy-MM-dd')}</td>
+                    <td>${doc.codite}</td>
+                    <td class="text-end">${doc.unidades}</td>
+                    <td class="text-end">${doc.saldo}</td>
+                    </tr>`
+
+            }
+            outputHtml += `</tbody></table>`
+        }
+
+        document.querySelector(".target-div").innerHTML = outputHtml
+        document.querySelector(".fetch-data").textContent = "Fetch Data"
+    })
+</script>
+
+</html>

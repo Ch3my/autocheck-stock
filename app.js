@@ -1,86 +1,28 @@
-import mysql from "mysql"
 import schedule from "node-schedule"
 import { WebClient } from '@slack/web-api'
+import axios from "axios";
 
-// Database configuration
-const dbConfig = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-};
-const web = new WebClient(process.env.SLACK_TOKEN)
+const corePrefix = process.env.CORE_PREFIX
 const SLACK_CHANNEL = process.env.SLACK_CHANNEL
+const web = new WebClient(process.env.SLACK_TOKEN)
 
 // Function to execute the query and send Slack message if rows > 0
-async function executeQueryAndSendSlackMessage(connection, letter) {
-  const query = `CALL CalculateDifference("${letter}");`;
+async function executeQueryAndSendSlackMessage(letter) {
   console.log(`${new Date().toLocaleString()} Checking ${letter}`)
-
-  // Se trae todos los componentes de items compuestos para verificar si el padre tiene unidades pendientes
-  const tabicomp = await queryDatabase(connection, "SELECT * FROM TABICOMP");
-
   try {
-    // Trae un array de 2, el primer elemento es como rows
-    const results = await callDatabase(connection, query);
-    if (results.length > 0) {
-      for (let [index, r] of [...results.entries()].reverse()) {
-        if (tabicomp.some(o => o.CODITE == r.CODIGO)) {
-          // El item con inventario malo es un componente, posiblemente su padre fue vendido?
-          let thisComponente = tabicomp.find(o => o.CODITE == r.CODIGO)
-
-          let undPendientesPadre = await queryDatabase(connection,
-            `select * from MOVDET
-            where MOVDET.SALDO > 0
-            AND MOVDET.FEC_SIS >= "2023-01-01"
-            AND MOVDET.MOVMTO IN ("55", "25")
-            AND MOVDET.ESTADO = 'P'
-            AND MOVDET.SALIDA = "${letter}"
-            and MOVDET.CODITE = "${thisComponente.CODIGO}"`
-          )
-          let totalUndPendientesHijoCalculadas = 0
-          for (let undPadre of undPendientesPadre) {
-            totalUndPendientesHijoCalculadas += undPadre.UNIDADES * thisComponente.UNIDADES
-          }
-          if ((totalUndPendientesHijoCalculadas + r.saldo_nvs + r.DOCUM) == r.FISICO) {
-            // El stock esta bien, hay que eliminar la fila
-            results.splice(index, 1);
-          }
-        }
-      }
-      if (results.length > 0) {
-        const message = `ANTUMALAL: Errores en el inventario en Sucursal ${letter} consulta retornó ${results.length} fila(s).`;
-        await sendSlackMessage(message);
-      }
+    let response = await axios.get(`${corePrefix}/api/v1/informes/check-stock-dvf?sessionId=WzI3LDM0LDIxLDEyLDk0XQ==&bodega=${letter}`)
+    response = response.data
+    if (response.data.length == 0) {
+      return
     }
+    let message = `ANTUMALAL: Errores en el inventario en Sucursal ${letter} consulta retornó ${response.data.length} fila(s) \n`;
+    for (let d of response.data) {
+      message += `${d.codName}`
+    }
+    await sendSlackMessage(message);
   } catch (error) {
     console.error(`Error for letter ${letter}: ${error.message}`);
   }
-}
-
-// Function to query the database using async/await
-function callDatabase(connection, query) {
-  return new Promise((resolve, reject) => {
-    connection.query(query, (error, [results, info], fields) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(results);
-      }
-    });
-  });
-}
-// Function to query the database using async/await
-function queryDatabase(connection, query) {
-  return new Promise((resolve, reject) => {
-    connection.query(query, (error, results, fields) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(results);
-      }
-    });
-  });
 }
 
 // Function to send a message to Slack using async/await
@@ -97,19 +39,13 @@ async function sendSlackMessage(message) {
   }
 }
 
-// schedule.scheduleJob('0 * * * *', async () => {
-
+// schedule.scheduleJob('* * * * *', async () => {
 // run every hour but no on weekends and not at night
 schedule.scheduleJob('0 8-17 * * 1-5', async () => {
-  const connection = mysql.createConnection(dbConfig);
-  connection.connect();
-
   for (let i = 65; i <= 72; i++) {
     const letter = String.fromCharCode(i);
-    await executeQueryAndSendSlackMessage(connection, letter);
+    await executeQueryAndSendSlackMessage(letter);
   }
-
-  connection.end();
 });
 
 console.log('Scheduled job started');

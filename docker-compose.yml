@@ -12,5 +12,6 @@ services:
       - DB_NAME=SGEANTUMALAL
       - SLACK_TOKEN=xoxb-923762630385-3860476070180-5vRFjgbIyuOXnNbZFYpu4DOy
       - SLACK_CHANNEL=soporte
+      - CORE_PREFIX=https://core.antumalal.net:4600
     command: ["node", "app.js"] 
  
