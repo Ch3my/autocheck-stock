@@ -3,6 +3,7 @@ services:
   app:
     image: node:18  
     working_dir: /home/node/app
+    restart: always
     volumes:
       - .:/home/node/app
     environment:
