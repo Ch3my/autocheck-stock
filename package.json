@@ -12,7 +12,6 @@
   "dependencies": {
     "@slack/web-api": "^6.9.0",
     "axios": "^1.6.2",
-    "mysql": "^2.18.1",
     "node-schedule": "^2.1.1"
   }
 }
