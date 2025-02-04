@@ -7,10 +7,10 @@ services:
     volumes:
       - .:/home/node/app
     environment:
-      SLACK_TOKEN: xoxb-923762630385-3860476070180-5vRFjgbIyuOXnNbZFYpu4DOy
+      SLACK_TOKEN: XXXXXXXXXXXXXXXX
       SLACK_CHANNEL: soporte
-      CORE_PREFIX: https://core.antumalal.net:4600
-      SESSIONID: 2020-05-09-02:26:33-12379152-5-a51da8be326d0f3f1527ffe00b9b853f11005088
+      CORE_PREFIX: https://core.com
+      SESSIONID: 2020-05-09-02:26:3xxxxxxxxxxxx
       TZ: America/Santiago
     command: ["node", "app.js"] 
  
